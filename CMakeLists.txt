@@ -24,9 +24,14 @@ target_include_directories(imgui PUBLIC
 
 add_executable(GraphicsTest
     src/main.cpp
+    src/Shader.cpp
+    src/Shader.h
+    src/Camera.cpp
+    src/Camera.h
 )
 
 target_include_directories(GraphicsTest PRIVATE
+    src
     thirdparty/glad/include
     thirdparty/glm
     thirdparty/glfw/include
@@ -38,6 +43,9 @@ target_link_libraries(GraphicsTest
     imgui
     opengl32
 )
+
+# Copy shader files to build directory
+file(COPY shaders DESTINATION ${CMAKE_BINARY_DIR})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GraphicsTest)
 
