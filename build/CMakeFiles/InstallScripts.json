@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"F:/Coding/C++/GraphicsTest/build/cmake_install.cmake",
+		"F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/cmake_install.cmake",
+		"F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/src/cmake_install.cmake",
+		"F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/docs/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

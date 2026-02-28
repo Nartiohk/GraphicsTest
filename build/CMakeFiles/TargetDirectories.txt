@@ -1,0 +1,13 @@
+F:/Coding/C++/GraphicsTest/build/CMakeFiles/glad.dir
+F:/Coding/C++/GraphicsTest/build/CMakeFiles/imgui.dir
+F:/Coding/C++/GraphicsTest/build/CMakeFiles/GraphicsTest.dir
+F:/Coding/C++/GraphicsTest/build/CMakeFiles/INSTALL.dir
+F:/Coding/C++/GraphicsTest/build/CMakeFiles/ALL_BUILD.dir
+F:/Coding/C++/GraphicsTest/build/CMakeFiles/ZERO_CHECK.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/CMakeFiles/uninstall.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/CMakeFiles/INSTALL.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/CMakeFiles/ALL_BUILD.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/src/CMakeFiles/glfw.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/src/CMakeFiles/update_mappings.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/src/CMakeFiles/INSTALL.dir
+F:/Coding/C++/GraphicsTest/build/thirdparty/glfw/docs/CMakeFiles/INSTALL.dir

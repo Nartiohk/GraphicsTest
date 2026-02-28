@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="F:\Coding\C++\GraphicsTest\build\CMakeFiles\3610c4f14f1e2b5cab900a3218b2802f\uninstall.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="F:\Coding\C++\GraphicsTest\thirdparty\glfw\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="F:\Coding\C++\GraphicsTest\build\thirdparty\glfw\CMakeFiles\uninstall" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{1C84D7C1-2B6E-33D5-A69A-BF5CAD02BCE7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
