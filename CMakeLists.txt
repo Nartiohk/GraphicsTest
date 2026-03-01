@@ -28,6 +28,8 @@ add_executable(GraphicsTest
     src/Shader.h
     src/Camera.cpp
     src/Camera.h
+    src/Cube.cpp
+    src/Cube.h
 )
 
 target_include_directories(GraphicsTest PRIVATE
@@ -41,11 +43,25 @@ target_link_libraries(GraphicsTest
     glfw
     glad
     imgui
-    opengl32
 )
 
-# Copy shader files to build directory
-file(COPY shaders DESTINATION ${CMAKE_BINARY_DIR})
+# Platform-specific OpenGL linking
+if(WIN32)
+    target_link_libraries(GraphicsTest opengl32)
+elseif(UNIX AND NOT APPLE)
+    target_link_libraries(GraphicsTest GL dl pthread)
+elseif(APPLE)
+    target_link_libraries(GraphicsTest "-framework OpenGL")
+endif()
+
+# Find Shader Files
+file(GLOB_RECURSE SHADER_FILES "shaders/*")
+
+# Add Target GraphicsTest
+target_sources(GraphicsTest PRIVATE ${SHADER_FILES})
+
+# Grouping "Shaders" in Visual Studio
+source_group("Shaders" FILES ${SHADER_FILES})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GraphicsTest)
 

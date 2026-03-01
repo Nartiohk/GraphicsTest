@@ -22,4 +22,7 @@ public:
 
     void ProcessKeyboard(int direction, float deltaTime);
     void ProcessMouseMovement(float xoffset, float yoffset);
+
+private:
+    void updateCameraVectors();
 };
