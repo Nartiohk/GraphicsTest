@@ -23,13 +23,15 @@ target_include_directories(imgui PUBLIC
 )
 
 add_executable(GraphicsTest
-    src/main.cpp
+    main.cpp
     src/Shader.cpp
     src/Shader.h
     src/Camera.cpp
     src/Camera.h
     src/Cube.cpp
     src/Cube.h
+    src/Plane.cpp
+    src/Plane.h
 )
 
 target_include_directories(GraphicsTest PRIVATE
@@ -61,7 +63,7 @@ file(GLOB_RECURSE SHADER_FILES "shaders/*")
 target_sources(GraphicsTest PRIVATE ${SHADER_FILES})
 
 # Grouping "Shaders" in Visual Studio
-source_group("Shaders" FILES ${SHADER_FILES})
+source_group("shaders" FILES ${SHADER_FILES})
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT GraphicsTest)
 

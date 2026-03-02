@@ -11,6 +11,7 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Cube.h"
+#include "Plane.h"
 
 void checkGLError(const char* location)
 {
@@ -103,47 +104,34 @@ int main()
 	std::cout << "Shader loaded successfully\n";
 	std::cout << "Shader ID: " << shader.ID << "\n";
 
+    Shader lightingShader("../shaders/basic.vert", "../shaders/lighting.frag");
+    std::cout << "Shader loaded successfully\n";
+    std::cout << "Shader ID: " << lightingShader.ID << "\n";
+
 	// Create multiple cube instances
-    std::vector<std::unique_ptr<Cube>> cubes;
-    // Center cube
-    //Cube cube = Cube(glm::vec3(0.0f, 0.0f, 0.0f));
+	std::vector<std::unique_ptr<Cube>> cubes;
+	glm::vec3 coral(0.0f, 0.5f, 0.31f);
+	Cube cube = Cube(glm::vec3(0.0f));
+	// Center cube
+	//Cube cube = Cube(glm::vec3(0.0f, 0.0f, 0.0f));
 	//cube.Color = glm::vec3(1.0f, 0.5f, 0.2f);
 	//cubes.push_back(std::make_unique<Cube>(cube));
 	for (int i = 0; i < 5; ++i)
-    {
-        float angle = (float)i / 5.0f * 360.0f;
-        float radius = 3.0f;
-        float x = cos(glm::radians(angle)) * radius;
-        float z = sin(glm::radians(angle)) * radius;
-        //Cube cube = Cube(glm::vec3(x, 0.0f, z));
-        cubes.push_back(std::make_unique<Cube>(glm::vec3(x, 0.0f, z)));
-    }
+	{
+		float angle = (float)i / 5.0f * 360.0f;
+		float radius = 3.0f;
+		float x = cos(glm::radians(angle)) * radius;
+		float z = sin(glm::radians(angle)) * radius;
+		//Cube cube = Cube(glm::vec3(x, 0.0f, z));
+		cubes.push_back(std::make_unique<Cube>(glm::vec3(x, 0.0f, z), glm::vec3(1.0f), glm::vec3(0.0f), coral));
+	}
 
-	//// Cube to the right
-	//cubes.push_back(Cube(glm::vec3(2.5f, 0.0f, 0.0f)));
-	//cubes.back().Color = glm::vec3(0.2f, 0.5f, 1.0f);
-
-	//// Cube to the left
-	//cubes.push_back(Cube(glm::vec3(-2.5f, 0.0f, 0.0f)));
-	//cubes.back().Color = glm::vec3(0.2f, 1.0f, 0.5f);
-
-	//// Cube above
-	//cubes.push_back(Cube(glm::vec3(0.0f, 2.5f, 0.0f)));
-	//cubes.back().Color = glm::vec3(1.0f, 0.2f, 0.5f);
-
-	//// Cube below
-	//cubes.push_back(Cube(glm::vec3(0.0f, -2.5f, 0.0f)));
-	//cubes.back().Color = glm::vec3(1.0f, 1.0f, 0.2f);
-
-	//// Cube in front
-	//cubes.push_back(Cube(glm::vec3(0.0f, 0.0f, 2.5f), glm::vec3(0.5f)));
-	//cubes.back().Color = glm::vec3(0.8f, 0.2f, 1.0f);
-
-	//// Cube behind
-	//cubes.push_back(Cube(glm::vec3(0.0f, 0.0f, -2.5f), glm::vec3(1.5f)));
-	//cubes.back().Color = glm::vec3(0.5f, 1.0f, 1.0f);
 
 	std::cout << "Created " << cubes.size() << " cubes\n";
+
+	// Create a ground plane
+	Plane plane = Plane(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(10.0f, 1.0f, 10.0f), glm::vec3(0.0f), glm::vec3(0.3f, 0.3f, 0.3f));
+	std::cout << "Created plane\n";
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -155,6 +143,8 @@ int main()
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);          // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
     ImGui_ImplOpenGL3_Init();
+
+    float theta = 0.0f;
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = (float)glfwGetTime();
@@ -169,20 +159,39 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkGLError("After clear");
 
-        // Draw cubes BEFORE ImGui
-        shader.use();
-        checkGLError("After shader.use()");
-
         // Setup projection and view matrices
         glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1280.0f / 720.0f, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
 
+
+        //Draw Source light
+        lightingShader.use();
+        lightingShader.setMat4("projection", projection);
+        lightingShader.setMat4("view", view);
+        //lightingShader.setVec3("lightColor", glm::vec3(1.0f));
+        theta += deltaTime; // Rotate at 50 degrees per second
+        cube.Position.x = cos(theta) * 5.0f; // No rotation for the light source cube
+        cube.Position.z = sin(theta) * 5.0f; // No rotation for the light source cube
+        //lightingShader.setVec3("lightPos", cube.Position);
+        cube.Draw(lightingShader);
+
+
+
+        // Draw cubes BEFORE ImGui
+        shader.use();
+        checkGLError("After shader.use()");
+
+
         shader.setMat4("projection", projection);
         checkGLError("After setMat4 projection");
         shader.setMat4("view", view);
+		shader.setVec3("lightColor", glm::vec3(1.0f));
+		shader.setVec3("lightPos", cube.Position);
         checkGLError("After setMat4 view");
 
+
         // Draw all cubes
+		//shader.setVec3("lightPos", cube.Position);
         for (auto& cube : cubes)
         {
             cube->Rotation.y += 20.0f * deltaTime;
@@ -190,6 +199,11 @@ int main()
             cube->Draw(shader);
             checkGLError("After cube.Draw()");
         }
+
+        // Draw the plane
+        plane.Draw(shader);
+        checkGLError("After plane.Draw()");
+
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();

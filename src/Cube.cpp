@@ -1,11 +1,11 @@
 #include "Cube.h"
 #include <glm/gtc/matrix_transform.hpp>
 
-Cube::Cube(glm::vec3 position, glm::vec3 scale)
+Cube::Cube(glm::vec3 position, glm::vec3 scale, glm::vec3 rotation, glm::vec3 color)
     : Position(position), 
       Scale(scale), 
-      Rotation(glm::vec3(0.0f)),
-      Color(glm::vec3(1.0f, 1.0f, 1.0f))
+      Rotation(rotation),
+      Color(color)
 {
     setupMesh();
 }
@@ -81,8 +81,8 @@ void Cube::setupMesh()
     glEnableVertexAttribArray(0);
 
     // Normal attribute
-    //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    //glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
 }
@@ -107,6 +107,10 @@ void Cube::Draw(const Shader& shader) const
     shader.setMat4("model", GetModelMatrix());
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) std::cout << "Error after setMat4: " << err << std::endl;
+
+	shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(GetModelMatrix()))));
+	err = glGetError();
+	if (err != GL_NO_ERROR) std::cout << "Error after setMat3: " << err << std::endl;
 
     shader.setVec3("objectColor", Color);
     glBindVertexArray(VAO);
