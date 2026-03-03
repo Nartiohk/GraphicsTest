@@ -12,6 +12,7 @@
 #include "Camera.h"
 #include "Cube.h"
 #include "Plane.h"
+#include "Sphere.h"
 
 void checkGLError(const char* location)
 {
@@ -111,7 +112,7 @@ int main()
 	// Create multiple cube instances
 	std::vector<std::unique_ptr<Cube>> cubes;
 	glm::vec3 coral(0.0f, 0.5f, 0.31f);
-	Cube cube = Cube(glm::vec3(0.0f));
+	Cube cube = Cube(glm::vec3(0.0f, 0.0f, 0.0));
 	// Center cube
 	//Cube cube = Cube(glm::vec3(0.0f, 0.0f, 0.0f));
 	//cube.Color = glm::vec3(1.0f, 0.5f, 0.2f);
@@ -132,6 +133,10 @@ int main()
 	// Create a ground plane
 	Plane plane = Plane(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(10.0f, 1.0f, 10.0f), glm::vec3(0.0f), glm::vec3(0.3f, 0.3f, 0.3f));
 	std::cout << "Created plane\n";
+
+	// Create a sphere
+	Sphere sphere = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2.0f), glm::vec3(0.0f), glm::vec3(1.0f, 0.2f, 0.3f));
+	std::cout << "Created sphere\n";
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -177,25 +182,50 @@ int main()
 
 
 
-        // Draw cubes BEFORE ImGui
-        shader.use();
-        checkGLError("After shader.use()");
+		// Draw cubes BEFORE ImGui
+		shader.use();
+		checkGLError("After shader.use()");
 
+		shader.setMat4("projection", projection);
+		checkGLError("After setMat4 projection");
+		shader.setMat4("view", view);
+		shader.setVec3("viewPos", camera.Position);
+		checkGLError("After setMat4 view");
 
-        shader.setMat4("projection", projection);
-        checkGLError("After setMat4 projection");
-        shader.setMat4("view", view);
-		shader.setVec3("lightColor", glm::vec3(1.0f));
-		shader.setVec3("lightPos", cube.Position);
-        checkGLError("After setMat4 view");
+		// Directional light (sun-like light from above)
+		shader.setVec3("dirLight.direction", glm::vec3(-0.2f, -1.0f, -0.3f));
+		shader.setVec3("dirLight.ambient", glm::vec3(0.05f, 0.05f, 0.05f));
+		shader.setVec3("dirLight.diffuse", glm::vec3(0.4f, 0.4f, 0.4f));
+		shader.setVec3("dirLight.specular", glm::vec3(0.5f, 0.5f, 0.5f));
+
+		// Point light (the orbiting cube's light)
+		shader.setVec3("pointLight.position", cube.Position);
+		shader.setVec3("pointLight.ambient", glm::vec3(0.05f, 0.05f, 0.05f));
+		shader.setVec3("pointLight.diffuse", glm::vec3(0.8f, 0.8f, 0.8f));
+		shader.setVec3("pointLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+		shader.setFloat("pointLight.constant", 1.0f);
+		shader.setFloat("pointLight.linear", 0.09f);
+		shader.setFloat("pointLight.quadratic", 0.032f);
+
+		// Spot light (flashlight from camera)
+		shader.setVec3("spotLight.position", camera.Position);
+		shader.setVec3("spotLight.direction", camera.Front);
+		shader.setVec3("spotLight.ambient", glm::vec3(0.0f, 0.0f, 0.0f));
+		shader.setVec3("spotLight.diffuse", glm::vec3(1.0f, 1.0f, 1.0f));
+		shader.setVec3("spotLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+		shader.setFloat("spotLight.constant", 1.0f);
+		shader.setFloat("spotLight.linear", 0.09f);
+		shader.setFloat("spotLight.quadratic", 0.032f);
+		shader.setFloat("spotLight.cutOff", glm::cos(glm::radians(12.5f)));
+		shader.setFloat("spotLight.outerCutOff", glm::cos(glm::radians(15.0f)));
 
 
         // Draw all cubes
 		//shader.setVec3("lightPos", cube.Position);
         for (auto& cube : cubes)
         {
-            cube->Rotation.y += 20.0f * deltaTime;
-            cube->Rotation.x += 10.0f * deltaTime;
+            //cube->Rotation.y += 20.0f * deltaTime;
+            //cube->Rotation.x += 10.0f * deltaTime;
             cube->Draw(shader);
             checkGLError("After cube.Draw()");
         }
@@ -203,6 +233,10 @@ int main()
         // Draw the plane
         plane.Draw(shader);
         checkGLError("After plane.Draw()");
+
+        // Draw the sphere
+        sphere.Draw(shader);
+        checkGLError("After sphere.Draw()");
 
 
         // Start the Dear ImGui frame

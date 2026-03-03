@@ -32,6 +32,8 @@ add_executable(GraphicsTest
     src/Cube.h
     src/Plane.cpp
     src/Plane.h
+    src/Sphere.h
+    src/Sphere.cpp
 )
 
 target_include_directories(GraphicsTest PRIVATE
