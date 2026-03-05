@@ -112,8 +112,8 @@ int main()
 	// Create multiple cube instances
 	std::vector<std::unique_ptr<Cube>> cubes;
 	glm::vec3 coral(0.0f, 0.5f, 0.31f);
-	Cube cube = Cube(glm::vec3(0.0f, 0.0f, 0.0));
-	// Center cube
+    Sphere light = Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.1f), glm::vec3(0.0f), glm::vec3(1.0f, 0.2f, 0.3f));
+    // Center cube
 	//Cube cube = Cube(glm::vec3(0.0f, 0.0f, 0.0f));
 	//cube.Color = glm::vec3(1.0f, 0.5f, 0.2f);
 	//cubes.push_back(std::make_unique<Cube>(cube));
@@ -174,12 +174,12 @@ int main()
         lightingShader.setMat4("projection", projection);
         lightingShader.setMat4("view", view);
         //lightingShader.setVec3("lightColor", glm::vec3(1.0f));
-        theta += deltaTime; // Rotate at 50 degrees per second
-        cube.Position.x = cos(theta) * 5.0f; // No rotation for the light source cube
-        cube.Position.z = sin(theta) * 5.0f; // No rotation for the light source cube
-        //lightingShader.setVec3("lightPos", cube.Position);
-        cube.Draw(lightingShader);
 
+        theta += deltaTime; // Rotate at 50 degrees per second
+        light.Position.x = cos(theta) * 5.0f; // No rotation for the light source cube
+        light.Position.z = sin(theta) * 5.0f; // No rotation for the light source cube
+        //lightingShader.setVec3("lightPos", cube.Position);
+        light.Draw(lightingShader);
 
 
 		// Draw cubes BEFORE ImGui
@@ -199,7 +199,7 @@ int main()
 		shader.setVec3("dirLight.specular", glm::vec3(0.5f, 0.5f, 0.5f));
 
 		// Point light (the orbiting cube's light)
-		shader.setVec3("pointLight.position", cube.Position);
+		shader.setVec3("pointLight.position", light.Position);
 		shader.setVec3("pointLight.ambient", glm::vec3(0.05f, 0.05f, 0.05f));
 		shader.setVec3("pointLight.diffuse", glm::vec3(0.8f, 0.8f, 0.8f));
 		shader.setVec3("pointLight.specular", glm::vec3(1.0f, 1.0f, 1.0f));
@@ -237,6 +237,7 @@ int main()
         // Draw the sphere
         sphere.Draw(shader);
         checkGLError("After sphere.Draw()");
+
 
 
         // Start the Dear ImGui frame

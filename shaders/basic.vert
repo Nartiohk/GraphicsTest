@@ -6,15 +6,21 @@ layout (location = 1) in vec3 aNormal;
 out vec3 Normal;
 out vec3 FragPos;
 out vec3 ViewPos;
+out vec4 FragPosLightSpace;
+out vec4 FragPosSpotLightSpace;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 normalMatrix;
+uniform mat4 lightSpaceMatrix;
+uniform mat4 spotLightSpaceMatrix;
 
 void main()
 {
     gl_Position = projection * view * model * vec4(aPos, 1.0);
     FragPos = vec3(model * vec4(aPos, 1.0));
     Normal = normalMatrix * aNormal;
+    FragPosLightSpace = lightSpaceMatrix * vec4(FragPos, 1.0);
+    FragPosSpotLightSpace = spotLightSpaceMatrix * vec4(FragPos, 1.0);
 }
