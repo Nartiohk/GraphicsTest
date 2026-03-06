@@ -41,7 +41,7 @@ void Renderer::BeginFrame()
 }
 
 void Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, const Shader& lightShader,
-                              const Scene& scene, LightingManager& lightingManager)
+                              const Scene& scene, LightingManager& lightingManager, bool useBatching, bool enableCulling)
 {
     // Setup projection and view matrices
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 
@@ -59,7 +59,21 @@ void Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, co
     lightingManager.SetupLighting(mainShader, camera);
     mainShader.setMat4("projection", projection);
     mainShader.setMat4("view", view);
-    scene.Render(mainShader);
+
+    if (useBatching)
+    {
+        // Create frustum for culling
+        Frustum frustum;
+        frustum.Update(projection * view);
+
+        // Render with batching and optional culling
+        const_cast<Scene&>(scene).RenderBatched(mainShader, frustum, enableCulling);
+    }
+    else
+    {
+        // Render without batching (legacy mode)
+        scene.Render(mainShader);
+    }
 }
 
 void Renderer::RenderMiniMap(const Shader& mainShader, const Shader& lightShader, const Scene& scene)
@@ -107,45 +121,94 @@ void Renderer::RenderMiniMap(const Shader& mainShader, const Shader& lightShader
     glViewport(0, 0, m_Width, m_Height);
 }
 
-void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap)
+void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, bool& useBatching, bool& enableCulling, const Scene& scene)
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
     // Lighting controls window
-    ImGui::Begin("Lighting Controls");
+    ImGui::Begin("Lighting Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("Press TAB to toggle cursor");
     ImGui::Separator();
-    
+
     ImGui::Text("Shadow Settings");
     bool enableShadows = lightingManager.IsEnableShadows();
     if (ImGui::Checkbox("Enable Shadows", &enableShadows))
     {
         lightingManager.SetEnableShadows(enableShadows);
     }
-    
+
     ImGui::Separator();
     ImGui::Text("Light Sources");
-    
+
+    // Directional Light
     bool enableDirLight = lightingManager.IsEnableDirLight();
     if (ImGui::Checkbox("Directional Light", &enableDirLight))
     {
         lightingManager.SetEnableDirLight(enableDirLight);
     }
-    
+
+    if (enableDirLight && ImGui::TreeNode("Directional Light Intensity"))
+    {
+        auto& dirLight = lightingManager.GetDirectionalLight();
+        ImGui::SliderFloat("Ambient##Dir", &dirLight.ambientIntensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("Diffuse##Dir", &dirLight.diffuseIntensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("Specular##Dir", &dirLight.specularIntensity, 0.0f, 2.0f);
+        ImGui::TreePop();
+    }
+
+    // Point Light
     bool enablePointLight = lightingManager.IsEnablePointLight();
     if (ImGui::Checkbox("Point Light", &enablePointLight))
     {
         lightingManager.SetEnablePointLight(enablePointLight);
     }
-    
+
+    if (enablePointLight && ImGui::TreeNode("Point Light Intensity"))
+    {
+        auto& pointLight = lightingManager.GetPointLight();
+        ImGui::SliderFloat("Ambient##Point", &pointLight.ambientIntensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("Diffuse##Point", &pointLight.diffuseIntensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("Specular##Point", &pointLight.specularIntensity, 0.0f, 2.0f);
+        ImGui::TreePop();
+    }
+
+    // Spot Light
     bool enableSpotLight = lightingManager.IsEnableSpotLight();
     if (ImGui::Checkbox("Spot Light", &enableSpotLight))
     {
         lightingManager.SetEnableSpotLight(enableSpotLight);
     }
-    
+
+    if (enableSpotLight && ImGui::TreeNode("Spot Light Intensity"))
+    {
+        auto& spotLight = lightingManager.GetSpotLight();
+        ImGui::SliderFloat("Ambient##Spot", &spotLight.ambientIntensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("Diffuse##Spot", &spotLight.diffuseIntensity, 0.0f, 2.0f);
+        ImGui::SliderFloat("Specular##Spot", &spotLight.specularIntensity, 0.0f, 2.0f);
+        ImGui::TreePop();
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Rendering Optimization");
+    ImGui::Checkbox("Use Batching", &useBatching);
+    if (useBatching)
+    {
+        ImGui::Checkbox("Enable Frustum Culling", &enableCulling);
+    }
+
+    ImGui::Separator();
+    ImGui::Text("Rendering Statistics");
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    if (useBatching)
+    {
+        ImGui::Text("Total Objects: %u", scene.GetTotalObjects());
+        ImGui::Text("Visible Objects: %u", scene.GetVisibleObjects());
+        ImGui::Text("Culled Objects: %u", scene.GetCulledObjects());
+        ImGui::Text("Draw Calls: %u", scene.GetDrawCalls());
+    }
+
     ImGui::Separator();
     ImGui::Text("View Settings");
     ImGui::Checkbox("Show Mini-Map", &showMiniMap);
@@ -154,8 +217,6 @@ void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap)
     ImGui::Separator();
     ImGui::Checkbox("Show ImGui Demo", &m_ShowImGuiDemo);
 
-    ImGui::Separator();
-    ImGui::Text("Application %.1f FPS", ImGui::GetIO().Framerate);
     ImGui::End();
 
     // Optional ImGui demo window

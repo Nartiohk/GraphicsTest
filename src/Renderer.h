@@ -19,9 +19,9 @@ public:
 
     void BeginFrame();
     void RenderMainView(const Camera& camera, const Shader& mainShader, const Shader& lightShader, 
-                       const Scene& scene, LightingManager& lightingManager);
+                       const Scene& scene, LightingManager& lightingManager, bool useBatching = true, bool enableCulling = true);
     void RenderMiniMap(const Shader& mainShader, const Shader& lightShader, const Scene& scene);
-    void RenderUI(LightingManager& lightingManager, bool& showMiniMap);
+    void RenderUI(LightingManager& lightingManager, bool& showMiniMap, bool& useBatching, bool& enableCulling, const Scene& scene);
     void EndFrame();
 
     bool ShouldShowMiniMap() const { return m_ShowMiniMap; }

@@ -2,11 +2,36 @@
 
 in vec3 Normal;
 in vec3 FragPos;
+in vec2 TexCoord;
+in mat3 TBN;
 
 out vec4 FragColor;
 
 uniform vec3 objectColor;
 uniform vec3 viewPos;
+
+// Material system
+struct Material {
+    vec3 baseColor;
+    float shininess;
+
+    bool useDiffuseMap;
+    sampler2D diffuseMap;
+
+    bool useSpecularMap;
+    sampler2D specularMap;
+
+    bool useNormalMap;
+    sampler2D normalMap;
+
+    bool useEmissionMap;
+    sampler2D emissionMap;
+};
+uniform Material material;
+
+// Legacy texture support (for backward compatibility)
+uniform bool useTexture;
+uniform sampler2D objectTexture;
 
 uniform bool enableShadows;
 uniform bool enableDirLight;
@@ -77,6 +102,7 @@ vec3 CalculateBlinnPhong(
     vec3 specularColor,
     vec3 albedo,
     float shininess,
+    float specularIntensity,
     float shadow
 )
 {
@@ -89,7 +115,7 @@ vec3 CalculateBlinnPhong(
 
     vec3 ambient  = ambientColor * albedo;
     vec3 diffuse  = diffuseColor * diff * albedo;
-    vec3 specular = specularColor * spec;
+    vec3 specular = specularColor * spec * specularIntensity;
 
     // Apply shadow (ambient is not affected)
     return ambient + (1.0 - shadow) * (diffuse + specular);
@@ -125,6 +151,7 @@ vec3 CalcDirLight(
     vec3 viewDir,
     vec3 albedo,
     float shininess,
+    float specularIntensity,
     float shadow
 )
 {
@@ -139,6 +166,7 @@ vec3 CalcDirLight(
         light.specular,
         albedo,
         shininess,
+        specularIntensity,
         shadow
     );
 }
@@ -151,6 +179,7 @@ vec3 CalcPointLight(
     vec3 viewDir,
     vec3 albedo,
     float shininess,
+    float specularIntensity,
     float shadow
 )
 {
@@ -173,6 +202,7 @@ vec3 CalcPointLight(
         light.specular,
         albedo,
         shininess,
+        specularIntensity,
         shadow
     );
 
@@ -187,6 +217,7 @@ vec3 CalcSpotLight(
     vec3 viewDir,
     vec3 albedo,
     float shininess,
+    float specularIntensity,
     float shadow
 )
 {
@@ -216,6 +247,7 @@ vec3 CalcSpotLight(
         light.specular,
         albedo,
         shininess,
+        specularIntensity,
         shadow
     );
 
@@ -259,11 +291,52 @@ float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, vec3 normal
 
 void main()
 {
-    vec3 norm = normalize(Normal);
-    vec3 viewDir = normalize(viewPos - FragPos);
-    vec3 albedo = objectColor;
+    // Get normal from normal map or use vertex normal
+    vec3 norm;
+    if (material.useNormalMap)
+    {
+        // Sample normal from normal map
+        norm = texture(material.normalMap, TexCoord).rgb;
+        // Transform from [0,1] to [-1,1]
+        norm = normalize(norm * 2.0 - 1.0);
+        // Transform to world space using TBN matrix
+        norm = normalize(TBN * norm);
+    }
+    else
+    {
+        norm = normalize(Normal);
+    }
 
-    float shininess = 32.0;
+    vec3 viewDir = normalize(viewPos - FragPos);
+
+    // Get albedo (diffuse color)
+    vec3 albedo;
+    if (material.useDiffuseMap)
+    {
+        albedo = texture(material.diffuseMap, TexCoord).rgb;
+    }
+    else if (useTexture) // Legacy texture support
+    {
+        albedo = texture(objectTexture, TexCoord).rgb;
+    }
+    else
+    {
+        albedo = objectColor * material.baseColor;
+    }
+
+    // Get specular intensity
+    float specularIntensity;
+    if (material.useSpecularMap)
+    {
+        // Specular map is usually grayscale, so we can use any channel
+        specularIntensity = texture(material.specularMap, TexCoord).r;
+    }
+    else
+    {
+        specularIntensity = 1.0; // Default full specular
+    }
+
+    float shininess = material.shininess;
 
     vec3 result = vec3(0.0);
 
@@ -277,7 +350,7 @@ void main()
             vec3 lightDir = normalize(-dirLight.direction);
             shadow = ShadowCalculation(fragPosLightSpace, dirLightShadowMap, norm, lightDir);
         }
-        result += CalcDirLight(dirLight, norm, viewDir, albedo, shininess, shadow);
+        result += CalcDirLight(dirLight, norm, viewDir, albedo, shininess, specularIntensity, shadow);
     }
 
     // Point light
@@ -290,7 +363,7 @@ void main()
             vec3 lightDir = normalize(pointLight.position - FragPos);
             shadow = ShadowCalculation(fragPosLightSpace, pointLightShadowMap, norm, lightDir);
         }
-        result += CalcPointLight(pointLight, norm, FragPos, viewDir, albedo, shininess, shadow);
+        result += CalcPointLight(pointLight, norm, FragPos, viewDir, albedo, shininess, specularIntensity, shadow);
     }
 
     // Spot light
@@ -303,7 +376,20 @@ void main()
             vec3 lightDir = normalize(spotLight.position - FragPos);
             shadow = ShadowCalculation(fragPosLightSpace, spotLightShadowMap, norm, lightDir);
         }
-        result += CalcSpotLight(spotLight, norm, FragPos, viewDir, albedo, shininess, shadow);
+        result += CalcSpotLight(spotLight, norm, FragPos, viewDir, albedo, shininess, specularIntensity, shadow);
+    }
+
+    // Add emission if available
+    if (material.useEmissionMap)
+    {
+        vec3 emission = texture(material.emissionMap, TexCoord).rgb;
+        result += emission;
+    }
+
+    // If no lights are enabled, use minimal ambient
+    if (!enableDirLight && !enablePointLight && !enableSpotLight)
+    {
+        result = albedo * 0.1;
     }
 
     FragColor = vec4(result, 1.0);

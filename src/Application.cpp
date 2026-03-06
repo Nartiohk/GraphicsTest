@@ -9,6 +9,8 @@ Application::Application(int width, int height)
     , m_DeltaTime(0.0f)
     , m_LastFrame(0.0f)
     , m_ShowMiniMap(true)
+    , m_UseBatching(true)
+    , m_EnableCulling(true)
 {
 }
 
@@ -140,7 +142,7 @@ void Application::Render()
 
     // Render main view
     m_Renderer->RenderMainView(*m_Camera, *m_MainShader, *m_LightingShader, 
-                               *m_Scene, *m_LightingManager);
+                               *m_Scene, *m_LightingManager, m_UseBatching, m_EnableCulling);
 
     // Render mini-map
     if (m_ShowMiniMap)
@@ -149,7 +151,7 @@ void Application::Render()
     }
 
     // Render UI
-    m_Renderer->RenderUI(*m_LightingManager, m_ShowMiniMap);
+    m_Renderer->RenderUI(*m_LightingManager, m_ShowMiniMap, m_UseBatching, m_EnableCulling, *m_Scene);
 
     // End frame
     m_Renderer->EndFrame();

@@ -46,6 +46,8 @@ private:
 
     // UI State
     bool m_ShowMiniMap;
+    bool m_UseBatching;
+    bool m_EnableCulling;
 
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 };
