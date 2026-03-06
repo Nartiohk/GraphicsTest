@@ -8,6 +8,7 @@
 #include "LightingManager.h"
 #include "InputManager.h"
 #include "Renderer.h"
+#include "Frustum.h"
 
 class Application
 {
@@ -48,6 +49,7 @@ private:
     bool m_ShowMiniMap;
     bool m_UseBatching;
     bool m_EnableCulling;
+    bool m_HideCulledInMinimap;
 
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 };

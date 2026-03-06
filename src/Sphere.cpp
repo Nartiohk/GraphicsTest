@@ -134,3 +134,13 @@ void Sphere::Draw(const Shader& shader) const
     err = glGetError();
     if (err != GL_NO_ERROR) std::cout << "Error after unbind VAO: " << err << std::endl;
 }
+
+AABB Sphere::GetAABB() const
+{
+    // Sphere AABB is a cube that contains the sphere
+    // For a unit sphere, this is [-1, -1, -1] to [1, 1, 1]
+    AABB aabb(glm::vec3(-1.0f), glm::vec3(1.0f));
+
+    // Transform by model matrix
+    return aabb.Transform(GetModelMatrix());
+}

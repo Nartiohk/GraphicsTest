@@ -40,7 +40,7 @@ void Renderer::BeginFrame()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, const Shader& lightShader,
+Frustum Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, const Shader& lightShader,
                               const Scene& scene, LightingManager& lightingManager, bool useBatching, bool enableCulling)
 {
     // Setup projection and view matrices
@@ -48,6 +48,10 @@ void Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, co
                                            (float)m_Width / (float)m_Height, 
                                            0.1f, 100.0f);
     glm::mat4 view = camera.GetViewMatrix();
+
+    // Create frustum for culling
+    Frustum frustum;
+    frustum.Update(projection * view);
 
     // Draw light source
     lightShader.use();
@@ -62,10 +66,6 @@ void Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, co
 
     if (useBatching)
     {
-        // Create frustum for culling
-        Frustum frustum;
-        frustum.Update(projection * view);
-
         // Render with batching and optional culling
         const_cast<Scene&>(scene).RenderBatched(mainShader, frustum, enableCulling);
     }
@@ -74,9 +74,13 @@ void Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, co
         // Render without batching (legacy mode)
         scene.Render(mainShader);
     }
+
+    return frustum;
 }
 
-void Renderer::RenderMiniMap(const Shader& mainShader, const Shader& lightShader, const Scene& scene)
+void Renderer::RenderMiniMap(const Shader& mainShader, const Shader& lightShader, const Scene& scene, 
+                            const Frustum& mainCameraFrustum, bool showCullingVisualization, 
+                            bool enableCulling, bool hideInvisible)
 {
     if (!m_ShowMiniMap)
         return;
@@ -115,13 +119,24 @@ void Renderer::RenderMiniMap(const Shader& mainShader, const Shader& lightShader
     mainShader.use();
     mainShader.setMat4("projection", miniMapProjection);
     mainShader.setMat4("view", miniMapView);
-    scene.Render(mainShader);
+
+    if (showCullingVisualization && enableCulling)
+    {
+        // Render with culling visualization only if culling is enabled
+        const_cast<Scene&>(scene).RenderWithCullingVisualization(mainShader, mainCameraFrustum, hideInvisible);
+    }
+    else
+    {
+        // Render normally without culling (show all objects)
+        scene.Render(mainShader);
+    }
 
     // Reset viewport
     glViewport(0, 0, m_Width, m_Height);
 }
 
-void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, bool& useBatching, bool& enableCulling, const Scene& scene)
+void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, bool& useBatching, 
+                       bool& enableCulling, bool& hideCulledInMinimap, const Scene& scene)
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -201,18 +216,66 @@ void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, boo
     ImGui::Separator();
     ImGui::Text("Rendering Statistics");
     ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::Text("Total Objects: %u", scene.GetTotalObjects());
+    ImGui::Text("Visible Objects: %u", scene.GetVisibleObjects());
+    ImGui::Text("Culled Objects: %u", scene.GetCulledObjects());
+
     if (useBatching)
     {
-        ImGui::Text("Total Objects: %u", scene.GetTotalObjects());
-        ImGui::Text("Visible Objects: %u", scene.GetVisibleObjects());
-        ImGui::Text("Culled Objects: %u", scene.GetCulledObjects());
+        ImGui::Text("Batches: %u", scene.GetBatchCount());
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Number of material groups\n(reduced state changes)");
+        }
+
+        ImGui::Text("Actual Draw Calls: %u", scene.GetActualDrawCalls());
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Actual GPU draw calls\n(would be reduced with instancing)");
+        }
+    }
+    else
+    {
         ImGui::Text("Draw Calls: %u", scene.GetDrawCalls());
+        ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "(No culling/batching)");
     }
 
     ImGui::Separator();
     ImGui::Text("View Settings");
     ImGui::Checkbox("Show Mini-Map", &showMiniMap);
     m_ShowMiniMap = showMiniMap;
+
+    if (showMiniMap)
+    {
+        ImGui::Indent();
+        ImGui::Text("Minimap Culling Visualization:");
+        if (ImGui::RadioButton("Hide Culled Objects", hideCulledInMinimap))
+        {
+            hideCulledInMinimap = true;
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Objects disappear when culled\n(realistic culling)");
+        }
+
+        if (ImGui::RadioButton("Show as Red/Green", !hideCulledInMinimap))
+        {
+            hideCulledInMinimap = false;
+        }
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip("Green = Visible\nRed = Culled\n(debug visualization)");
+        }
+        ImGui::Unindent();
+    }
 
     ImGui::Separator();
     ImGui::Checkbox("Show ImGui Demo", &m_ShowImGuiDemo);

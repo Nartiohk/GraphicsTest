@@ -54,7 +54,21 @@ struct RenderBatch
     std::vector<Renderable*> renderables;
     unsigned int drawCallCount;
 
-    RenderBatch() : drawCallCount(0) {}
+    // Instance data for instanced rendering
+    std::vector<glm::mat4> modelMatrices;
+    std::vector<glm::mat3> normalMatrices;
+    std::vector<glm::vec3> colors;
+    unsigned int instanceVBO;
+    bool instanceBufferInitialized;
+
+    RenderBatch() : drawCallCount(0), instanceVBO(0), instanceBufferInitialized(false) {}
+    ~RenderBatch()
+    {
+        if (instanceVBO != 0)
+        {
+            glDeleteBuffers(1, &instanceVBO);
+        }
+    }
 };
 
 class BatchRenderer
@@ -79,8 +93,9 @@ public:
     unsigned int GetTotalRenderables() const { return m_TotalRenderables; }
     unsigned int GetVisibleRenderables() const { return m_VisibleRenderables; }
     unsigned int GetCulledRenderables() const { return m_TotalRenderables - m_VisibleRenderables; }
-    unsigned int GetBatchCount() const { return m_Batches.size(); }
+    unsigned int GetBatchCount() const;
     unsigned int GetDrawCallCount() const;
+    unsigned int GetActualDrawCalls() const; // Actual GPU draw calls
 
 private:
     std::map<BatchKey, RenderBatch> m_Batches;

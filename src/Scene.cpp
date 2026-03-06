@@ -7,6 +7,11 @@ Scene::Scene()
     : m_Plane(glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(10.0f, 1.0f, 10.0f), glm::vec3(0.0f), glm::vec3(0.3f, 0.3f, 0.3f))
     , m_Sphere(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(2.0f), glm::vec3(0.0f), glm::vec3(1.0f, 0.2f, 0.3f))
     , m_LightSource(glm::vec3(0.0f, 2.0f, 0.0f), glm::vec3(0.1f), glm::vec3(0.0f), glm::vec3(1.0f, 1.0f, 1.0f))
+    , m_TotalObjects(0)
+    , m_VisibleObjects(0)
+    , m_DrawCalls(0)
+    , m_BatchCount(0)
+    , m_ActualDrawCalls(0)
 {
     // Load textures and create materials
     LoadTextures();
@@ -106,6 +111,13 @@ void Scene::CreateMaterials()
 
 void Scene::Render(const Shader& shader) const
 {
+    // Update statistics for non-batched rendering
+    m_TotalObjects = m_Cubes.size() + 2; // cubes + plane + sphere
+    m_VisibleObjects = m_TotalObjects; // No culling in regular render
+    m_DrawCalls = m_TotalObjects; // No batching = 1 draw call per object
+    m_BatchCount = 0; // No batching
+    m_ActualDrawCalls = m_TotalObjects; // Same as draw calls without batching
+
     for (const auto& cube : m_Cubes)
     {
         cube->Draw(shader);
@@ -116,49 +128,150 @@ void Scene::Render(const Shader& shader) const
 
 void Scene::RenderBatched(const Shader& shader, const Frustum& frustum, bool enableCulling)
 {
-    // Clear previous frame's batch
+    // Clear previous frame's batch and renderables
     m_BatchRenderer.Clear();
+    m_Renderables.clear();
+    m_Renderables.reserve(m_Cubes.size() + 2); // cubes + plane + sphere
 
-    // Submit all renderables to batch renderer
+    // Create renderables and store them
     for (const auto& cube : m_Cubes)
     {
-        Renderable r = cube->CreateRenderable();
-        m_BatchRenderer.Submit(&r);
+        m_Renderables.push_back(cube->CreateRenderable());
     }
 
-    Renderable planeR = m_Plane.CreateRenderable();
-    m_BatchRenderer.Submit(&planeR);
+    m_Renderables.push_back(m_Plane.CreateRenderable());
+    // Sphere doesn't have material support yet, skip it in batching
 
-    // Sphere doesn't have material/batching support yet, draw separately
+    // Submit pointers to stored renderables
+    for (auto& renderable : m_Renderables)
+    {
+        m_BatchRenderer.Submit(&renderable);
+    }
 
     // Prepare batches (culling happens here)
     m_BatchRenderer.Prepare(frustum, enableCulling);
 
+    // Check if sphere is visible
+    bool sphereVisible = true;
+    if (enableCulling)
+    {
+        AABB sphereAABB = m_Sphere.GetAABB();
+        sphereVisible = frustum.IsAABBVisible(sphereAABB);
+    }
+
+    // Update statistics
+    m_TotalObjects = m_BatchRenderer.GetTotalRenderables() + 1; // +1 for sphere
+    m_VisibleObjects = m_BatchRenderer.GetVisibleRenderables() + (sphereVisible ? 1 : 0);
+    m_BatchCount = m_BatchRenderer.GetBatchCount() + (sphereVisible ? 1 : 0); // Number of material groups
+    m_ActualDrawCalls = m_BatchRenderer.GetActualDrawCalls() + (sphereVisible ? 1 : 0); // Actual GPU calls
+    m_DrawCalls = m_BatchCount; // For UI display, show batch count as "draw calls"
+
     // Render all batches
     m_BatchRenderer.Render(shader);
 
-    // Draw sphere separately (not batched)
-    m_Sphere.Draw(shader);
+    // Draw sphere separately only if visible
+    if (sphereVisible)
+    {
+        m_Sphere.Draw(shader);
+    }
 }
 
-unsigned int Scene::GetTotalObjects() const
+void Scene::RenderWithCullingVisualization(const Shader& shader, const Frustum& mainCameraFrustum, bool hideInvisible)
 {
-    return m_BatchRenderer.GetTotalRenderables();
-}
+    shader.use();
 
-unsigned int Scene::GetVisibleObjects() const
-{
-    return m_BatchRenderer.GetVisibleRenderables();
-}
+    if (hideInvisible)
+    {
+        // Mode 1: Actually hide culled objects (like real culling)
 
-unsigned int Scene::GetCulledObjects() const
-{
-    return m_BatchRenderer.GetCulledRenderables();
-}
+        // Check and render each cube
+        for (const auto& cube : m_Cubes)
+        {
+            AABB aabb = cube->GetAABB();
+            bool isVisible = mainCameraFrustum.IsAABBVisible(aabb);
 
-unsigned int Scene::GetDrawCalls() const
-{
-    return m_BatchRenderer.GetDrawCallCount() + 1; // +1 for sphere
+            // Skip rendering if not visible (actual culling)
+            if (!isVisible)
+                continue;
+
+            // Render visible objects normally with their materials
+            cube->Draw(shader);
+        }
+
+        // Check and render plane
+        AABB planeAABB = m_Plane.GetAABB();
+        bool planeVisible = mainCameraFrustum.IsAABBVisible(planeAABB);
+
+        if (planeVisible)
+        {
+            m_Plane.Draw(shader);
+        }
+
+        // Check and render sphere
+        AABB sphereAABB = m_Sphere.GetAABB();
+        bool sphereVisible = mainCameraFrustum.IsAABBVisible(sphereAABB);
+
+        if (sphereVisible)
+        {
+            m_Sphere.Draw(shader);
+        }
+    }
+    else
+    {
+        // Mode 2: Show all objects but color-coded (green = visible, red = culled)
+
+        // Check each cube
+        for (const auto& cube : m_Cubes)
+        {
+            AABB aabb = cube->GetAABB();
+            bool isVisible = mainCameraFrustum.IsAABBVisible(aabb);
+
+            shader.setMat4("model", cube->GetModelMatrix());
+            shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(cube->GetModelMatrix()))));
+
+            // Color: Green if visible, Red if culled
+            shader.setVec3("objectColor", isVisible ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f));
+
+            // Set material defaults
+            shader.setBool("material.useDiffuseMap", false);
+            shader.setBool("material.useSpecularMap", false);
+            shader.setBool("material.useNormalMap", false);
+            shader.setBool("material.useEmissionMap", false);
+            shader.setVec3("material.baseColor", glm::vec3(1.0f));
+            shader.setFloat("material.shininess", 32.0f);
+            shader.setBool("useTexture", false);
+
+            glBindVertexArray(cube->GetVAO());
+            glDrawArrays(GL_TRIANGLES, 0, cube->GetVertexCount());
+            glBindVertexArray(0);
+        }
+
+        // Render plane
+        AABB planeAABB = m_Plane.GetAABB();
+        bool planeVisible = mainCameraFrustum.IsAABBVisible(planeAABB);
+
+        shader.setMat4("model", m_Plane.GetModelMatrix());
+        shader.setMat3("normalMatrix", glm::transpose(glm::inverse(glm::mat3(m_Plane.GetModelMatrix()))));
+        shader.setVec3("objectColor", planeVisible ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f));
+
+        shader.setBool("material.useDiffuseMap", false);
+        shader.setBool("material.useSpecularMap", false);
+        shader.setBool("material.useNormalMap", false);
+        shader.setBool("material.useEmissionMap", false);
+        shader.setVec3("material.baseColor", glm::vec3(1.0f));
+        shader.setFloat("material.shininess", 32.0f);
+        shader.setBool("useTexture", false);
+
+        glBindVertexArray(m_Plane.GetVAO());
+        glDrawArrays(GL_TRIANGLES, 0, m_Plane.GetVertexCount());
+        glBindVertexArray(0);
+
+        // Draw sphere with visibility color
+        AABB sphereAABB = m_Sphere.GetAABB();
+        bool sphereVisible = mainCameraFrustum.IsAABBVisible(sphereAABB);
+        shader.setVec3("objectColor", sphereVisible ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f));
+        m_Sphere.Draw(shader);
+    }
 }
 
 void Scene::RenderLightSource(const Shader& shader) const

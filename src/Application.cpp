@@ -11,6 +11,7 @@ Application::Application(int width, int height)
     , m_ShowMiniMap(true)
     , m_UseBatching(true)
     , m_EnableCulling(true)
+    , m_HideCulledInMinimap(true)
 {
 }
 
@@ -140,18 +141,21 @@ void Application::Render()
     // Begin main rendering
     m_Renderer->BeginFrame();
 
-    // Render main view
-    m_Renderer->RenderMainView(*m_Camera, *m_MainShader, *m_LightingShader, 
-                               *m_Scene, *m_LightingManager, m_UseBatching, m_EnableCulling);
+    // Render main view and get frustum
+    Frustum mainCameraFrustum = m_Renderer->RenderMainView(*m_Camera, *m_MainShader, *m_LightingShader, 
+                                                            *m_Scene, *m_LightingManager, m_UseBatching, m_EnableCulling);
 
-    // Render mini-map
+    // Render mini-map with culling visualization
     if (m_ShowMiniMap)
     {
-        m_Renderer->RenderMiniMap(*m_MainShader, *m_LightingShader, *m_Scene);
+        // Pass enableCulling so minimap respects the culling setting
+        m_Renderer->RenderMiniMap(*m_MainShader, *m_LightingShader, *m_Scene, mainCameraFrustum, 
+                                  m_UseBatching, m_EnableCulling, m_HideCulledInMinimap);
     }
 
     // Render UI
-    m_Renderer->RenderUI(*m_LightingManager, m_ShowMiniMap, m_UseBatching, m_EnableCulling, *m_Scene);
+    m_Renderer->RenderUI(*m_LightingManager, m_ShowMiniMap, m_UseBatching, m_EnableCulling, 
+                        m_HideCulledInMinimap, *m_Scene);
 
     // End frame
     m_Renderer->EndFrame();

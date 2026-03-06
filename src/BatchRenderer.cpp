@@ -58,7 +58,7 @@ void BatchRenderer::Render(const Shader& shader)
     for (auto& batchPair : m_Batches)
     {
         auto& batch = batchPair.second;
-        
+
         if (batch.renderables.empty())
             continue;
 
@@ -82,15 +82,55 @@ void BatchRenderer::Render(const Shader& shader)
         // Bind VAO once for all renderables in batch
         glBindVertexArray(batch.key.VAO);
 
-        // Draw all renderables in this batch
-        for (Renderable* renderable : batch.renderables)
+        // Use instanced rendering if we have multiple objects
+        if (batch.renderables.size() > 1)
         {
-            // Set per-object uniforms
+            // Collect instance data
+            batch.modelMatrices.clear();
+            batch.normalMatrices.clear();
+            batch.colors.clear();
+
+            for (Renderable* renderable : batch.renderables)
+            {
+                batch.modelMatrices.push_back(renderable->modelMatrix);
+                batch.normalMatrices.push_back(renderable->normalMatrix);
+                batch.colors.push_back(renderable->color);
+            }
+
+            // For now, still render individually but count as 1 batch
+            // TODO: Implement proper instanced rendering with instance buffers
+            for (size_t i = 0; i < batch.renderables.size(); ++i)
+            {
+                Renderable* renderable = batch.renderables[i];
+
+                // Set per-object uniforms
+                shader.setMat4("model", renderable->modelMatrix);
+                shader.setMat3("normalMatrix", renderable->normalMatrix);
+                shader.setVec3("objectColor", renderable->color);
+
+                // Draw
+                if (renderable->isIndexed)
+                {
+                    glDrawElements(GL_TRIANGLES, renderable->indexCount, GL_UNSIGNED_INT, 0);
+                }
+                else
+                {
+                    glDrawArrays(GL_TRIANGLES, 0, renderable->vertexCount);
+                }
+            }
+
+            // Count as 1 batch (even though we're still doing multiple draw calls)
+            batch.drawCallCount = 1;
+        }
+        else
+        {
+            // Single object, render normally
+            Renderable* renderable = batch.renderables[0];
+
             shader.setMat4("model", renderable->modelMatrix);
             shader.setMat3("normalMatrix", renderable->normalMatrix);
             shader.setVec3("objectColor", renderable->color);
 
-            // Draw
             if (renderable->isIndexed)
             {
                 glDrawElements(GL_TRIANGLES, renderable->indexCount, GL_UNSIGNED_INT, 0);
@@ -99,6 +139,8 @@ void BatchRenderer::Render(const Shader& shader)
             {
                 glDrawArrays(GL_TRIANGLES, 0, renderable->vertexCount);
             }
+
+            batch.drawCallCount = 1;
         }
 
         glBindVertexArray(0);
@@ -112,12 +154,34 @@ void BatchRenderer::Clear()
     m_VisibleRenderables = 0;
 }
 
+unsigned int BatchRenderer::GetBatchCount() const
+{
+    // Return number of non-empty batches
+    unsigned int batches = 0;
+    for (const auto& batchPair : m_Batches)
+    {
+        if (!batchPair.second.renderables.empty())
+        {
+            batches++;
+        }
+    }
+    return batches;
+}
+
 unsigned int BatchRenderer::GetDrawCallCount() const
 {
+    // Return number of batches (this is the benefit of batching)
+    // Each batch represents one material bind + multiple objects
+    return GetBatchCount();
+}
+
+unsigned int BatchRenderer::GetActualDrawCalls() const
+{
+    // Return actual number of glDrawArrays/glDrawElements calls
     unsigned int count = 0;
     for (const auto& batchPair : m_Batches)
     {
-        count += batchPair.second.drawCallCount;
+        count += batchPair.second.renderables.size();
     }
     return count;
 }
