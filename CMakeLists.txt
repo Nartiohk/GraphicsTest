@@ -34,6 +34,19 @@ add_executable(GraphicsTest
     src/Plane.h
     src/Sphere.h
     src/Sphere.cpp
+    src/ShadowMap.cpp
+    src/ShadowMap.h
+    src/Light.h
+    src/LightingManager.cpp
+    src/LightingManager.h
+    src/Scene.cpp
+    src/Scene.h
+    src/InputManager.cpp
+    src/InputManager.h
+    src/Renderer.cpp
+    src/Renderer.h
+    src/Application.cpp
+    src/Application.h
 )
 
 target_include_directories(GraphicsTest PRIVATE
