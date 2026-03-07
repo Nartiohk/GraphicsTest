@@ -7,6 +7,7 @@
 #include <imgui_impl_opengl3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <memory>
 
 #include "Shader.h"
 #include "Camera.h"
