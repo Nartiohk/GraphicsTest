@@ -9,7 +9,6 @@ Renderer::Renderer(GLFWwindow* window, int width, int height)
     , m_Width(width)
     , m_Height(height)
     , m_ShowMiniMap(true)
-    , m_ShowImGuiDemo(false)
     , m_MiniMapWidth(320)
     , m_MiniMapHeight(240)
 {
@@ -278,15 +277,10 @@ void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, boo
     }
 
     ImGui::Separator();
-    ImGui::Checkbox("Show ImGui Demo", &m_ShowImGuiDemo);
 
     ImGui::End();
 
-    // Optional ImGui demo window
-    if (m_ShowImGuiDemo)
-    {
-        ImGui::ShowDemoWindow(&m_ShowImGuiDemo);
-    }
+
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

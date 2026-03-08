@@ -36,7 +36,7 @@ private:
     int m_Width;
     int m_Height;
     bool m_ShowMiniMap;
-    bool m_ShowImGuiDemo;
+
 
     // Mini-map settings
     int m_MiniMapWidth;
