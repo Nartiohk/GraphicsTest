@@ -55,6 +55,10 @@ add_executable(GraphicsTest
     src/Frustum.h
     src/BatchRenderer.cpp
     src/BatchRenderer.h
+    src/Mesh.cpp
+    src/Mesh.h
+    src/Object.cpp
+    src/Object.h
 )
 
 target_include_directories(GraphicsTest PRIVATE

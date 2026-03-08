@@ -1,9 +1,8 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include "Cube.h"
-#include "Plane.h"
-#include "Sphere.h"
+#include "Object.h"
+#include "Mesh.h"
 #include "Shader.h"
 #include "Texture.h"
 #include "Material.h"
@@ -21,8 +20,8 @@ public:
     void RenderWithCullingVisualization(const Shader& shader, const Frustum& mainCameraFrustum, bool hideInvisible = true);
     void RenderLightSource(const Shader& shader) const;
 
-    Sphere& GetLightSource() { return m_LightSource; }
-    const Sphere& GetLightSource() const { return m_LightSource; }
+    Object& GetLightSource() { return *m_LightSource; }
+    const Object& GetLightSource() const { return *m_LightSource; }
 
     // Statistics (works for both batched and non-batched)
     unsigned int GetTotalObjects() const { return m_TotalObjects; }
@@ -33,10 +32,14 @@ public:
     unsigned int GetActualDrawCalls() const { return m_ActualDrawCalls; }
 
 private:
-    std::vector<std::unique_ptr<Cube>> m_Cubes;
-    Plane m_Plane;
-    Sphere m_Sphere;
-    Sphere m_LightSource;
+    // Shared meshes (created once, shared by multiple objects)
+    std::shared_ptr<Mesh> m_CubeMesh;
+    std::shared_ptr<Mesh> m_PlaneMesh;
+    std::shared_ptr<Mesh> m_SphereMesh;
+
+    // Object instances (each has transform + material, shares mesh)
+    std::vector<std::unique_ptr<Object>> m_Objects;
+    std::unique_ptr<Object> m_LightSource;
 
     // Materials
     std::shared_ptr<Material> m_BrickMaterial;
@@ -55,4 +58,6 @@ private:
 
     void LoadTextures();
     void CreateMaterials();
+    void CreateMeshes();
+    void CreateObjects();
 };

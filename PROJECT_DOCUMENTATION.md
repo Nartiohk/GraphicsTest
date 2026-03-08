@@ -6,11 +6,12 @@
 1. [Project Overview](#project-overview)
 2. [Features](#features)
 3. [Architecture](#architecture)
-4. [Systems](#systems)
-5. [Controls](#controls)
-6. [Build Instructions](#build-instructions)
-7. [Technical Details](#technical-details)
-8. [Performance](#performance)
+4. [Mesh/Object System](#meshobject-system)
+5. [Systems](#systems)
+6. [Controls](#controls)
+7. [Build Instructions](#build-instructions)
+8. [Technical Details](#technical-details)
+9. [Performance](#performance)
 
 ---
 
@@ -64,6 +65,8 @@ A feature-rich 3D graphics engine built with modern OpenGL (3.3 Core), demonstra
 ```
 GraphicsTest/
 ├── src/
+│   ├── Mesh.cpp/h             - Shared geometry storage
+│   ├── Object.cpp/h           - Object instances
 │   ├── Application.cpp/h      - Main application loop
 │   ├── Renderer.cpp/h         - Rendering orchestration
 │   ├── Scene.cpp/h            - Scene management
@@ -75,11 +78,11 @@ GraphicsTest/
 │   ├── Shader.cpp/h           - Shader compilation
 │   ├── BatchRenderer.cpp/h    - Batch rendering
 │   ├── Frustum.cpp/h          - Frustum culling
-│   ├── Cube.cpp/h             - Cube geometry
-│   ├── Plane.cpp/h            - Plane geometry
-│   ├── Sphere.cpp/h           - Sphere geometry
 │   ├── ShadowMap.cpp/h        - Shadow map FBO
-│   └── Light.h                - Light structures
+│   ├── Light.h                - Light structures
+│   ├── Cube.cpp/h             - Legacy (can remove)
+│   ├── Plane.cpp/h            - Legacy (can remove)
+│   └── Sphere.cpp/h           - Legacy (can remove)
 ├── shaders/
 │   ├── basic.vert             - Main vertex shader
 │   ├── basic.frag             - Main fragment shader
@@ -94,11 +97,132 @@ GraphicsTest/
 ```
 
 ### Design Patterns
-- **Component-Based** - Objects own their geometry and materials
+- **Flyweight Pattern** - Mesh (intrinsic state) + Object (extrinsic state)
+- **Component-Based** - Objects reference shared components
 - **Dependency Injection** - Application injects dependencies
 - **Observer Pattern** - UI updates reflect internal state
-- **Factory Pattern** - Material and texture creation
+- **Factory Pattern** - Material and mesh creation
 - **Strategy Pattern** - Different rendering modes (batched/non-batched)
+
+---
+
+## Mesh/Object System
+
+**Purpose:** Efficient memory usage through shared geometry with instanced transforms.
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────┐
+│  Scene                                   │
+├─────────────────────────────────────────┤
+│  Shared Meshes (Geometry Data):         │
+│  ├─ CubeMesh     (VAO, VBO, EBO)        │
+│  ├─ PlaneMesh    (VAO, VBO, EBO)        │
+│  └─ SphereMesh   (VAO, VBO, EBO)        │
+│                                          │
+│  Object Instances (Transform + Material):│
+│  ├─ Cube1  → CubeMesh  + Brick          │
+│  ├─ Cube2  → CubeMesh  + Container      │
+│  ├─ Cube3  → CubeMesh  + Brick          │
+│  ├─ Cube4  → CubeMesh  + Container      │
+│  ├─ Cube5  → CubeMesh  + Brick          │
+│  ├─ Plane  → PlaneMesh + Brick          │
+│  ├─ Sphere → SphereMesh + Brick         │
+│  └─ Light  → SphereMesh + None          │
+└─────────────────────────────────────────┘
+```
+
+### Key Benefits
+
+**Memory Efficiency:**
+```
+Before (Each object owns geometry):
+5 cubes    = 5 × 2 KB  = 10 KB
+2 spheres  = 2 × 236 KB = 472 KB
+1 plane    = 1 × 0.3 KB = 0.3 KB
+─────────────────────────────────
+Total: ~483 KB
+
+After (Shared meshes):
+1 cube mesh    = 2 KB
+1 sphere mesh  = 236 KB
+1 plane mesh   = 0.3 KB
+8 objects      = 0.8 KB
+─────────────────────────────────
+Total: ~239 KB (50% savings!)
+```
+
+**Scalability:**
+```
+100 cubes:
+- Before: 100 VAOs × 2 KB = 200 KB
+- After: 1 VAO + 100 objects = 10 KB
+
+1000 cubes:
+- Before: 1000 VAOs × 2 KB = 2 MB
+- After: 1 VAO + 1000 objects = 100 KB
+```
+
+### Classes
+
+**Mesh Class:**
+```cpp
+class Mesh {
+    // GPU buffers (created once, shared)
+    unsigned int VAO, VBO, EBO;
+
+    // Factory methods
+    static shared_ptr<Mesh> CreateCube();
+    static shared_ptr<Mesh> CreatePlane();
+    static shared_ptr<Mesh> CreateSphere(unsigned int segments);
+};
+```
+
+**Object Class:**
+```cpp
+class Object {
+    // Transform (instance-specific)
+    glm::vec3 Position, Scale, Rotation;
+
+    // References (shared)
+    shared_ptr<Mesh> m_Mesh;          // Shared geometry
+    shared_ptr<Material> m_Material;   // Shared material
+
+    void Draw(const Shader& shader);
+    AABB GetAABB() const;
+};
+```
+
+### Usage Example
+
+```cpp
+// Create shared meshes (once)
+auto cubeMesh = Mesh::CreateCube();
+
+// Create multiple instances (lightweight)
+auto cube1 = make_unique<Object>(cubeMesh, vec3(0,0,0));
+auto cube2 = make_unique<Object>(cubeMesh, vec3(2,0,0));
+auto cube3 = make_unique<Object>(cubeMesh, vec3(4,0,0));
+
+// All 3 cubes share the same mesh data!
+// Memory: 1 mesh + 3 transforms (~300 bytes total)
+// vs 3 separate meshes (~6 KB)
+```
+
+### Design Pattern: Flyweight
+
+**Intrinsic State (Mesh):**
+- Vertex positions
+- Normals, UVs, tangents
+- Immutable, shared
+- Heavy (~KB to MB)
+
+**Extrinsic State (Object):**
+- Position, rotation, scale
+- Material reference
+- Mutable, unique
+- Light (~100 bytes)
 
 ---
 
@@ -643,13 +767,32 @@ Shadow Maps:    3x 2048x2048   = 12 MB (depth only)
 Total: ~19 MB
 ```
 
-**Geometry:**
+**Geometry (with Mesh/Object architecture):**
 ```
-5 Cubes:   36 vertices × 14 floats × 5 = 10 KB
-1 Plane:   6 vertices × 14 floats     = 0.3 KB
-1 Sphere:  4,225 vertices × 14 floats = 236 KB
+Shared Meshes:
+├─ Cube Mesh:   36 vertices × 14 floats  = 2 KB
+├─ Plane Mesh:  4 vertices × 14 floats   = 0.2 KB
+└─ Sphere Mesh: 4,225 vertices × 14 floats = 236 KB
 ─────────────────────────────────────────
-Total: ~246 KB
+Total Meshes: ~238 KB
+
+Object Instances (8 objects):
+├─ 5 Cubes: 5 × ~100 bytes   = 0.5 KB
+├─ 1 Plane: 1 × ~100 bytes   = 0.1 KB
+└─ 2 Spheres: 2 × ~100 bytes = 0.2 KB
+─────────────────────────────────────────
+Total Objects: ~0.8 KB
+
+Grand Total: ~239 KB (vs ~483 KB before = 50% savings!)
+```
+
+**Old Architecture (before Mesh/Object):**
+```
+5 Cubes:   5 × 36 vertices × 14 floats  = 10 KB
+1 Plane:   1 × 4 vertices × 14 floats   = 0.2 KB
+2 Spheres: 2 × 4,225 vertices × 14 floats = 472 KB
+─────────────────────────────────────────
+Total: ~482 KB (wasted memory from duplicates!)
 ```
 
 ### Optimization Strategies
@@ -675,41 +818,62 @@ Total: ~246 KB
 
 ### Objects
 
-**Cubes (5):**
+**Scene Composition (8 objects using 3 meshes):**
+
+**Cubes (5 instances of shared CubeMesh):**
 ```cpp
 for (int i = 0; i < 5; i++) {
     float angle = i / 5.0f * 360.0f;
     float x = cos(radians(angle)) * 3.0f;
     float z = sin(radians(angle)) * 3.0f;
-    
+
+    auto cube = make_unique<Object>(
+        m_CubeMesh,  // Shared!
+        vec3(x, 0, z), 
+        vec3(1, 1, 1)
+    );
+
     Material: (i % 2 == 0) ? Brick : Container
-    Position: (x, 0, z)
-    Scale: (1, 1, 1)
 }
 ```
 
-**Plane:**
+**Plane (instance of PlaneMesh):**
 ```cpp
+auto plane = make_unique<Object>(
+    m_PlaneMesh,     // Shared!
+    vec3(0, -1, 0),
+    vec3(10, 1, 10)
+);
 Material: Brick (with normal map)
-Position: (0, -1, 0)
-Scale: (10, 1, 10)
 ```
 
-**Sphere:**
+**Sphere (instance of SphereMesh):**
 ```cpp
+auto sphere = make_unique<Object>(
+    m_SphereMesh,    // Shared!
+    vec3(0, 0, 0),
+    vec3(2, 2, 2)
+);
 Material: Brick (with normal map)
-Position: (0, 0, 0)
-Scale: (2, 2, 2)
 Texture Repeat: 4x
 ```
 
-**Light Source:**
+**Light Source (another instance of SphereMesh):**
 ```cpp
-Type: Sphere (small)
-Position: Orbits around center
+auto light = make_unique<Object>(
+    m_SphereMesh,    // Shared with main sphere!
+    vec3(orbiting),
+    vec3(0.1, 0.1, 0.1)
+);
+Type: Animated orbiting point light
 Radius: 5 units
 Color: White
 ```
+
+**Memory Efficiency:**
+- All 5 cubes share 1 mesh (80% memory savings)
+- Both spheres share 1 mesh (50% memory savings)
+- Total: 8 objects, 3 meshes (vs 8 meshes before)
 
 ### Batching Groups
 
@@ -784,24 +948,31 @@ Total: 4 batches, 5 draw calls (vs 7 without culling)
 ## Future Enhancements
 
 ### Rendering
-- [ ] **Instanced rendering** - True draw call reduction
+- [ ] **Instanced rendering** - True draw call reduction via `glDrawElementsInstanced`
 - [ ] **Deferred shading** - More lights with less cost
 - [ ] **PBR materials** - Physical-based rendering
 - [ ] **HDR + Bloom** - High dynamic range
 - [ ] **SSAO** - Screen-space ambient occlusion
 
 ### Optimizations
+- [x] **Mesh/Object architecture** - Shared geometry (DONE! 50% memory savings)
+- [ ] **GPU instancing** - Upload transforms to GPU
 - [ ] **Occlusion culling** - Objects behind objects
 - [ ] **LOD system** - Level of detail
 - [ ] **Texture atlasing** - Reduce texture binds
-- [ ] **Geometry instancing** - GPU-side duplication
 
 ### Features
-- [ ] **Multiple scenes** - Scene switching
+- [ ] **Mesh library** - Centralized mesh management
 - [ ] **Model loading** - .obj/.gltf support
+- [ ] **Multiple scenes** - Scene switching
 - [ ] **Post-processing** - Effects stack
 - [ ] **Particle systems** - GPU particles
 - [ ] **Skybox** - Environment mapping
+
+### Architecture
+- [ ] **ECS (Entity Component System)** - More flexible than current design
+- [ ] **Resource manager** - Automatic loading/unloading
+- [ ] **Serialization** - Save/load scenes
 
 ---
 
