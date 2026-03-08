@@ -37,6 +37,7 @@ uniform bool enableShadows;
 uniform bool enableDirLight;
 uniform bool enablePointLight;
 uniform bool enableSpotLight;
+uniform bool useNormalMapping; // Global toggle for normal mapping
 
 // Shadow maps
 uniform sampler2D dirLightShadowMap;
@@ -293,7 +294,7 @@ void main()
 {
     // Get normal from normal map or use vertex normal
     vec3 norm;
-    if (material.useNormalMap)
+    if (useNormalMapping && material.useNormalMap)
     {
         // Sample normal from normal map
         norm = texture(material.normalMap, TexCoord).rgb;

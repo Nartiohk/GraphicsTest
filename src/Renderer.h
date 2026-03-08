@@ -20,12 +20,13 @@ public:
 
     void BeginFrame();
     Frustum RenderMainView(const Camera& camera, const Shader& mainShader, const Shader& lightShader, 
-                       const Scene& scene, LightingManager& lightingManager, bool useBatching = true, bool enableCulling = true);
+                       const Scene& scene, LightingManager& lightingManager, bool useBatching = true, 
+                       bool enableCulling = true, bool enableNormalMapping = true);
     void RenderMiniMap(const Shader& mainShader, const Shader& lightShader, const Scene& scene, 
                       const Frustum& mainCameraFrustum, bool showCullingVisualization = true, 
                       bool enableCulling = true, bool hideInvisible = true);
     void RenderUI(LightingManager& lightingManager, bool& showMiniMap, bool& useBatching, 
-                 bool& enableCulling, bool& hideCulledInMinimap, const Scene& scene);
+                 bool& enableCulling, bool& hideCulledInMinimap, bool& enableNormalMapping, const Scene& scene);
     void EndFrame();
 
     bool ShouldShowMiniMap() const { return m_ShowMiniMap; }

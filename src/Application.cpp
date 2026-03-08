@@ -12,6 +12,7 @@ Application::Application(int width, int height)
     , m_UseBatching(true)
     , m_EnableCulling(true)
     , m_HideCulledInMinimap(true)
+    , m_EnableNormalMapping(true)
 {
 }
 
@@ -143,7 +144,8 @@ void Application::Render()
 
     // Render main view and get frustum
     Frustum mainCameraFrustum = m_Renderer->RenderMainView(*m_Camera, *m_MainShader, *m_LightingShader, 
-                                                            *m_Scene, *m_LightingManager, m_UseBatching, m_EnableCulling);
+                                                            *m_Scene, *m_LightingManager, m_UseBatching, 
+                                                            m_EnableCulling, m_EnableNormalMapping);
 
     // Render mini-map with culling visualization
     if (m_ShowMiniMap)
@@ -155,7 +157,7 @@ void Application::Render()
 
     // Render UI
     m_Renderer->RenderUI(*m_LightingManager, m_ShowMiniMap, m_UseBatching, m_EnableCulling, 
-                        m_HideCulledInMinimap, *m_Scene);
+                        m_HideCulledInMinimap, m_EnableNormalMapping, *m_Scene);
 
     // End frame
     m_Renderer->EndFrame();

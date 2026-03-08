@@ -49,7 +49,9 @@ Scene::Scene()
     if (m_BrickMaterial)
     {
         m_Plane.SetMaterial(m_BrickMaterial);
+        m_Sphere.SetMaterial(m_BrickMaterial);
     }
+
 }
 
 void Scene::LoadTextures()
@@ -140,7 +142,7 @@ void Scene::RenderBatched(const Shader& shader, const Frustum& frustum, bool ena
     }
 
     m_Renderables.push_back(m_Plane.CreateRenderable());
-    // Sphere doesn't have material support yet, skip it in batching
+    m_Renderables.push_back(m_Sphere.CreateRenderable()); // Now sphere has material support!
 
     // Submit pointers to stored renderables
     for (auto& renderable : m_Renderables)
@@ -151,29 +153,15 @@ void Scene::RenderBatched(const Shader& shader, const Frustum& frustum, bool ena
     // Prepare batches (culling happens here)
     m_BatchRenderer.Prepare(frustum, enableCulling);
 
-    // Check if sphere is visible
-    bool sphereVisible = true;
-    if (enableCulling)
-    {
-        AABB sphereAABB = m_Sphere.GetAABB();
-        sphereVisible = frustum.IsAABBVisible(sphereAABB);
-    }
-
     // Update statistics
-    m_TotalObjects = m_BatchRenderer.GetTotalRenderables() + 1; // +1 for sphere
-    m_VisibleObjects = m_BatchRenderer.GetVisibleRenderables() + (sphereVisible ? 1 : 0);
-    m_BatchCount = m_BatchRenderer.GetBatchCount() + (sphereVisible ? 1 : 0); // Number of material groups
-    m_ActualDrawCalls = m_BatchRenderer.GetActualDrawCalls() + (sphereVisible ? 1 : 0); // Actual GPU calls
+    m_TotalObjects = m_BatchRenderer.GetTotalRenderables();
+    m_VisibleObjects = m_BatchRenderer.GetVisibleRenderables();
+    m_BatchCount = m_BatchRenderer.GetBatchCount();
+    m_ActualDrawCalls = m_BatchRenderer.GetActualDrawCalls();
     m_DrawCalls = m_BatchCount; // For UI display, show batch count as "draw calls"
 
-    // Render all batches
+    // Render all batches (includes sphere now!)
     m_BatchRenderer.Render(shader);
-
-    // Draw sphere separately only if visible
-    if (sphereVisible)
-    {
-        m_Sphere.Draw(shader);
-    }
 }
 
 void Scene::RenderWithCullingVisualization(const Shader& shader, const Frustum& mainCameraFrustum, bool hideInvisible)

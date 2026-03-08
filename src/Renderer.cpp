@@ -40,7 +40,8 @@ void Renderer::BeginFrame()
 }
 
 Frustum Renderer::RenderMainView(const Camera& camera, const Shader& mainShader, const Shader& lightShader,
-                              const Scene& scene, LightingManager& lightingManager, bool useBatching, bool enableCulling)
+                              const Scene& scene, LightingManager& lightingManager, bool useBatching, 
+                              bool enableCulling, bool enableNormalMapping)
 {
     // Setup projection and view matrices
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 
@@ -62,6 +63,9 @@ Frustum Renderer::RenderMainView(const Camera& camera, const Shader& mainShader,
     lightingManager.SetupLighting(mainShader, camera);
     mainShader.setMat4("projection", projection);
     mainShader.setMat4("view", view);
+
+    // Set normal mapping toggle
+    mainShader.setBool("useNormalMapping", enableNormalMapping);
 
     if (useBatching)
     {
@@ -135,7 +139,7 @@ void Renderer::RenderMiniMap(const Shader& mainShader, const Shader& lightShader
 }
 
 void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, bool& useBatching, 
-                       bool& enableCulling, bool& hideCulledInMinimap, const Scene& scene)
+                       bool& enableCulling, bool& hideCulledInMinimap, bool& enableNormalMapping, const Scene& scene)
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -205,11 +209,19 @@ void Renderer::RenderUI(LightingManager& lightingManager, bool& showMiniMap, boo
     }
 
     ImGui::Separator();
-    ImGui::Text("Rendering Optimization");
+    ImGui::Text("Rendering Options");
     ImGui::Checkbox("Use Batching", &useBatching);
     if (useBatching)
     {
         ImGui::Checkbox("Enable Frustum Culling", &enableCulling);
+    }
+
+    ImGui::Checkbox("Enable Normal Mapping", &enableNormalMapping);
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip("Enables normal mapping for all objects\nAdds surface detail from normal maps");
     }
 
     ImGui::Separator();

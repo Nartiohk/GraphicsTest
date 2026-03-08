@@ -50,6 +50,7 @@ private:
     bool m_UseBatching;
     bool m_EnableCulling;
     bool m_HideCulledInMinimap;
+    bool m_EnableNormalMapping;
 
     static void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 };
