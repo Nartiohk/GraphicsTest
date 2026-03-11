@@ -167,8 +167,6 @@ struct SpotLight {
 - **3 shadow maps** (directional, point, spot)
 
 
-```
-
 ### Normal Mapping System
 
 **Purpose:** Add surface detail without additional geometry.
@@ -176,50 +174,14 @@ struct SpotLight {
 **How It Works:**
 
 **Tangent Space:**
-```
+
 At each vertex, we define a coordinate system:
 - Normal (N): Surface normal
 - Tangent (T): Direction of U coordinate
 - Bitangent (B): Direction of V coordinate
 
 TBN Matrix = [T | B | N]
-```
 
-**Normal Map Transformation:**
-```glsl
-// Sample normal from texture (in tangent space)
-vec3 normalMap = texture(material.normalMap, TexCoords).rgb;
-normalMap = normalize(normalMap * 2.0 - 1.0); // [0,1] → [-1,1]
-
-// Transform to world space
-mat3 TBN = mat3(Tangent, Bitangent, Normal);
-vec3 worldNormal = normalize(TBN * normalMap);
-
-// Use worldNormal for lighting calculations
-```
-
-**Vertex Format:**
-```
-Position (3 floats)  : x, y, z
-Normal (3 floats)    : nx, ny, nz
-TexCoord (2 floats)  : u, v
-Tangent (3 floats)   : tx, ty, tz
-Bitangent (3 floats) : bx, by, bz
-─────────────────────────────────
-Total: 14 floats per vertex
-```
-
-**Sphere Tangent Calculation:**
-```cpp
-// Tangent points in direction of increasing U
-tangent.x = -sin(u * 2π) * sin(v * π)
-tangent.y = 0
-tangent.z = cos(u * 2π) * sin(v * π)
-tangent = normalize(tangent)
-
-// Bitangent perpendicular to normal and tangent
-bitangent = normalize(cross(normal, tangent))
-```
 
 **Toggle Control:**
 - Checkbox: "Enable Normal Mapping"
