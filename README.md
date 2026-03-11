@@ -48,12 +48,6 @@ cmake --build . --config Release
 - **Controls & Build** - How to use and compile
 - **Troubleshooting** - Common issues and solutions
 
-**📖 [Mesh/Object Refactoring](MESH_OBJECT_ARCHITECTURE.md)** - Deep dive into:
-- Architecture comparison (before/after)
-- Memory savings breakdown
-- Usage examples
-- Future enhancements
-
 ## Controls
 
 ### Camera
@@ -80,30 +74,6 @@ cmake --build . --config Release
 - **GLM** - Mathematics library
 - **ImGui** - Immediate mode GUI
 - **stb_image** - Image loading
-
-## Performance
-
-### Without Optimizations
-```
-Draw Calls: 7
-State Changes: 21
-FPS: ~60
-```
-
-### With Batching + Culling
-```
-Batches: 3-4 (depends on view)
-Actual Draw Calls: 3-7
-State Changes: 9-12 (40% reduction)
-FPS: ~100 (67% improvement)
-```
-
-### Memory Usage
-```
-Before Mesh/Object: ~483 KB geometry
-After Mesh/Object:  ~239 KB geometry
-Savings:            ~244 KB (50% reduction)
-```
 
 ## Scene Composition
 
@@ -162,13 +132,3 @@ GraphicsTest/
 │   └── container.jpg           - Wood texture
 └── CMakeLists.txt
 ```
-
----
-
-**Build Status:** ✅ Successful  
-**Documentation:** ✅ Complete  
-**Memory Efficiency:** ✅ 50% savings  
-**Performance:** ✅ 67% improvement  
-**License:** Educational Use
-
-**GitHub:** [Nartiohk/GraphicsTest](https://github.com/Nartiohk/GraphicsTest)
