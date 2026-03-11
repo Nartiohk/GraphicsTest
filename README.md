@@ -86,7 +86,7 @@ cmake --build . --config Release
 
 ## Screenshots
 
-[Add screenshots here]
+<img width="1282" height="752" alt="image" src="https://github.com/user-attachments/assets/e2d8d48c-aaa3-4a83-b634-cfd16b443664" />
 
 ## Build Instructions
 
