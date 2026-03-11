@@ -84,8 +84,9 @@ GraphicsTest/
 │   └── container.jpg          - Wood crate diffuse
 └── main.cpp                   - Entry point
 ```
-
-### 4. Lighting System
+## System
+---
+### Lighting System
 
 **Light Types:**
 
