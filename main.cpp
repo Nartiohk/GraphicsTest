@@ -1,5 +1,7 @@
 #include <iostream>
+
 #include "Application.h"
+
 
 int main()
 {
@@ -14,5 +16,7 @@ int main()
 	std::cout << "Application initialized successfully" << std::endl;
 	app.Run();
 
+
 	return 0;
+
 }
