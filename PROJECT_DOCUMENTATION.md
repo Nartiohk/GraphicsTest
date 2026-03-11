@@ -2,17 +2,6 @@
 
 **Modern OpenGL Rendering Engine with Advanced Features**
 
-## Table of Contents
-1. [Project Overview](#project-overview)
-2. [Features](#features)
-3. [Architecture](#architecture)
-4. [Mesh/Object System](#meshobject-system)
-5. [Systems](#systems)
-6. [Controls](#controls)
-7. [Build Instructions](#build-instructions)
-8. [Technical Details](#technical-details)
-9. [Performance](#performance)
-
 ---
 
 ## Project Overview
