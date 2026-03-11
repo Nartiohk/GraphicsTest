@@ -40,6 +40,8 @@ add_executable(GraphicsTest
     src/Material.h
     src/ShadowMap.cpp
     src/ShadowMap.h
+    src/CubeShadowMap.cpp
+    src/CubeShadowMap.h
     src/Light.h
     src/LightingManager.cpp
     src/LightingManager.h

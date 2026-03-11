@@ -69,6 +69,9 @@ bool Application::Initialize()
     m_ShadowDepthShader = std::make_unique<Shader>("../shaders/shadow_depth.vert", "../shaders/shadow_depth.frag");
     std::cout << "Shadow depth shader loaded (ID: " << m_ShadowDepthShader->ID << ")" << std::endl;
 
+    m_CubeShadowDepthShader = std::make_unique<Shader>("../shaders/cube_shadow_depth.vert", "../shaders/cube_shadow_depth.frag");
+    std::cout << "Cube shadow depth shader loaded (ID: " << m_CubeShadowDepthShader->ID << ")" << std::endl;
+
     // Initialize cameras
     m_Camera = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 5.0f));
     m_MiniMapCamera = std::make_unique<Camera>(glm::vec3(0.0f, 15.0f, 15.0f));
@@ -80,6 +83,7 @@ bool Application::Initialize()
     // Initialize lighting manager
     m_LightingManager = std::make_unique<LightingManager>();
     m_LightingManager->SetShadowDepthShader(m_ShadowDepthShader.get());
+    m_LightingManager->SetCubeShadowDepthShader(m_CubeShadowDepthShader.get());
     std::cout << "Lighting manager created" << std::endl;
 
     // Initialize input manager

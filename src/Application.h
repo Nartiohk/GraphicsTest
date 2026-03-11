@@ -40,6 +40,7 @@ private:
     std::unique_ptr<Shader> m_MainShader;
     std::unique_ptr<Shader> m_LightingShader;
     std::unique_ptr<Shader> m_ShadowDepthShader;
+    std::unique_ptr<Shader> m_CubeShadowDepthShader;
 
     // Timing
     float m_DeltaTime;

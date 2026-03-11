@@ -41,13 +41,13 @@ uniform bool useNormalMapping; // Global toggle for normal mapping
 
 // Shadow maps
 uniform sampler2D dirLightShadowMap;
-uniform sampler2D pointLightShadowMap;
+uniform samplerCube pointLightShadowMap;
 uniform sampler2D spotLightShadowMap;
 
 // Light space matrices
 uniform mat4 dirLightSpaceMatrix;
-uniform mat4 pointLightSpaceMatrix;
 uniform mat4 spotLightSpaceMatrix;
+uniform float pointLightFarPlane;
 
 // Directional Light
 struct DirLight {
@@ -92,6 +92,7 @@ uniform SpotLight spotLight;
 
 // Function prototypes
 float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, vec3 normal, vec3 lightDir);
+float CubeShadowCalculation(vec3 fragPos, vec3 lightPos, samplerCube shadowCubemap, float farPlane);
 
 
 vec3 CalculateBlinnPhong(
@@ -290,6 +291,28 @@ float ShadowCalculation(vec4 fragPosLightSpace, sampler2D shadowMap, vec3 normal
     return shadow;
 }
 
+// Cubemap shadow calculation for point lights
+float CubeShadowCalculation(vec3 fragPos, vec3 lightPos, samplerCube shadowCubemap, float farPlane)
+{
+    // Get vector from light to fragment
+    vec3 fragToLight = fragPos - lightPos;
+
+    // Sample from cubemap
+    float closestDepth = texture(shadowCubemap, fragToLight).r;
+
+    // closestDepth is now in range [0,1] (already normalized by farPlane in shadow pass)
+    // Get current depth as normalized value
+    float currentDepth = length(fragToLight) / farPlane;
+
+    // Bias to prevent shadow acne (smaller for cubemaps)
+    float bias = 0.005;
+
+    // Check if fragment is in shadow
+    float shadow = currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    return shadow;
+}
+
 void main()
 {
     // Get normal from normal map or use vertex normal
@@ -360,9 +383,7 @@ void main()
         float shadow = 0.0;
         if (enableShadows)
         {
-            vec4 fragPosLightSpace = pointLightSpaceMatrix * vec4(FragPos, 1.0);
-            vec3 lightDir = normalize(pointLight.position - FragPos);
-            shadow = ShadowCalculation(fragPosLightSpace, pointLightShadowMap, norm, lightDir);
+            shadow = CubeShadowCalculation(FragPos, pointLight.position, pointLightShadowMap, pointLightFarPlane);
         }
         result += CalcPointLight(pointLight, norm, FragPos, viewDir, albedo, shininess, specularIntensity, shadow);
     }

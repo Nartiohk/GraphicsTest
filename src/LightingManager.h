@@ -4,6 +4,7 @@
 #include <functional>
 #include "Light.h"
 #include "ShadowMap.h"
+#include "CubeShadowMap.h"
 #include "Shader.h"
 #include "Camera.h"
 
@@ -32,10 +33,11 @@ public:
     bool IsEnableSpotLight() const { return m_EnableSpotLight; }
 
     const ShadowMap& GetDirLightShadowMap() const { return *m_DirLightShadowMap; }
-    const ShadowMap& GetPointLightShadowMap() const { return *m_PointLightShadowMap; }
+    const CubeShadowMap& GetPointLightCubeShadowMap() const { return *m_PointLightCubeShadowMap; }
     const ShadowMap& GetSpotLightShadowMap() const { return *m_SpotLightShadowMap; }
 
     void SetShadowDepthShader(Shader* shader) { m_ShadowDepthShader = shader; }
+    void SetCubeShadowDepthShader(Shader* shader) { m_CubeShadowDepthShader = shader; }
 
 private:
     DirectionalLight m_DirLight;
@@ -43,10 +45,11 @@ private:
     SpotLight m_SpotLight;
 
     std::unique_ptr<ShadowMap> m_DirLightShadowMap;
-    std::unique_ptr<ShadowMap> m_PointLightShadowMap;
+    std::unique_ptr<CubeShadowMap> m_PointLightCubeShadowMap;
     std::unique_ptr<ShadowMap> m_SpotLightShadowMap;
 
     Shader* m_ShadowDepthShader;
+    Shader* m_CubeShadowDepthShader;
 
     bool m_EnableShadows;
     bool m_EnableDirLight;
