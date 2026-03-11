@@ -197,7 +197,6 @@ TBN Matrix = [T | B | N]
 - **Q/E** - Move down/up
 - **Mouse** - Look around
 - **Tab** - Toggle mouse cursor (enable/disable camera control)
-- **Mouse Scroll** - Zoom (adjust FOV)
 
 ### UI Controls
 
