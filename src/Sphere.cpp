@@ -27,6 +27,7 @@ void Sphere::setupMesh()
     const unsigned int X_SEGMENTS = 64;
     const unsigned int Y_SEGMENTS = 64;
     const float PI = glm::pi<float>();
+    const float textureRepeat = 4.0f; // Repeat texture 4 times for better detail
 
     // Generate vertices
     for (unsigned int y = 0; y <= Y_SEGMENTS; ++y)
@@ -43,11 +44,36 @@ void Sphere::setupMesh()
             vertices.push_back(xPos * 0.5f);
             vertices.push_back(yPos * 0.5f);
             vertices.push_back(zPos * 0.5f);
-            
+
             // Normal (for a sphere centered at origin, normal = normalized position)
-            vertices.push_back(xPos);
-            vertices.push_back(yPos);
-            vertices.push_back(zPos);
+            glm::vec3 normal(xPos, yPos, zPos);
+            vertices.push_back(normal.x);
+            vertices.push_back(normal.y);
+            vertices.push_back(normal.z);
+
+            // Texture coordinates (repeated for better detail)
+            vertices.push_back(xSegment * textureRepeat);
+            vertices.push_back(ySegment * textureRepeat);
+
+            // Calculate tangent for normal mapping
+            // Tangent points in the direction of increasing U (horizontal)
+            glm::vec3 tangent;
+            tangent.x = -std::sin(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+            tangent.y = 0.0f;
+            tangent.z = std::cos(xSegment * 2.0f * PI) * std::sin(ySegment * PI);
+            tangent = glm::normalize(tangent);
+
+            vertices.push_back(tangent.x);
+            vertices.push_back(tangent.y);
+            vertices.push_back(tangent.z);
+
+            // Calculate bitangent (perpendicular to both normal and tangent)
+            glm::vec3 bitangent = glm::cross(normal, tangent);
+            bitangent = glm::normalize(bitangent);
+
+            vertices.push_back(bitangent.x);
+            vertices.push_back(bitangent.y);
+            vertices.push_back(bitangent.z);
         }
     }
 
@@ -83,13 +109,25 @@ void Sphere::setupMesh()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    // Position attribute (location 0)
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    // Normal attribute (location 1)
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    // Texture coordinate attribute (location 2)
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    // Tangent attribute (location 3)
+    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+    glEnableVertexAttribArray(3);
+
+    // Bitangent attribute (location 4)
+    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+    glEnableVertexAttribArray(4);
 
     glBindVertexArray(0);
 }
@@ -118,19 +156,51 @@ void Sphere::Draw(const Shader& shader) const
     glm::mat3 normalMatrix = glm::mat3(glm::transpose(glm::inverse(model)));
     shader.setMat3("normalMatrix", normalMatrix);
 
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) std::cout << "Error after setMat4: " << err << std::endl;
-
     shader.setVec3("objectColor", Color);
+
+    // Bind material if available
+    if (m_Material)
+    {
+        m_Material->Bind(shader);
+    }
+    else
+    {
+        // Set defaults if no material
+        shader.setBool("material.useDiffuseMap", false);
+        shader.setBool("material.useSpecularMap", false);
+        shader.setBool("material.useNormalMap", false);
+        shader.setBool("material.useEmissionMap", false);
+        shader.setVec3("material.baseColor", glm::vec3(1.0f));
+        shader.setFloat("material.shininess", 32.0f);
+        shader.setBool("useTexture", false);
+    }
+
     glBindVertexArray(VAO);
-    err = glGetError();
-    if (err != GL_NO_ERROR) std::cout << "Error after glBindVertexArray: " << err << std::endl;
-
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
-    err = glGetError();
-    if (err != GL_NO_ERROR) std::cout << "Error after glDrawElements: " << err << std::endl;
-
     glBindVertexArray(0);
-    err = glGetError();
-    if (err != GL_NO_ERROR) std::cout << "Error after unbind VAO: " << err << std::endl;
+}
+
+AABB Sphere::GetAABB() const
+{
+    // Sphere AABB is a cube that contains the sphere
+    // For a unit sphere, this is [-1, -1, -1] to [1, 1, 1]
+    AABB aabb(glm::vec3(-1.0f), glm::vec3(1.0f));
+
+    // Transform by model matrix
+    return aabb.Transform(GetModelMatrix());
+}
+
+Renderable Sphere::CreateRenderable() const
+{
+    Renderable r;
+    r.modelMatrix = GetModelMatrix();
+    r.normalMatrix = glm::transpose(glm::inverse(glm::mat3(r.modelMatrix)));
+    r.color = Color;
+    r.material = m_Material;
+    r.bounds = GetAABB();
+    r.VAO = VAO;
+    r.vertexCount = 0; // Not used for indexed rendering
+    r.isIndexed = true;
+    r.indexCount = indexCount;
+    return r;
 }

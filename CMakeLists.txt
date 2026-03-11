@@ -34,6 +34,33 @@ add_executable(GraphicsTest
     src/Plane.h
     src/Sphere.h
     src/Sphere.cpp
+    src/Texture.cpp
+    src/Texture.h
+    src/Material.cpp
+    src/Material.h
+    src/ShadowMap.cpp
+    src/ShadowMap.h
+    src/CubeShadowMap.cpp
+    src/CubeShadowMap.h
+    src/Light.h
+    src/LightingManager.cpp
+    src/LightingManager.h
+    src/Scene.cpp
+    src/Scene.h
+    src/InputManager.cpp
+    src/InputManager.h
+    src/Renderer.cpp
+    src/Renderer.h
+    src/Application.cpp
+    src/Application.h
+    src/Frustum.cpp
+    src/Frustum.h
+    src/BatchRenderer.cpp
+    src/BatchRenderer.h
+    src/Mesh.cpp
+    src/Mesh.h
+    src/Object.cpp
+    src/Object.h
 )
 
 target_include_directories(GraphicsTest PRIVATE
@@ -41,6 +68,7 @@ target_include_directories(GraphicsTest PRIVATE
     thirdparty/glad/include
     thirdparty/glm
     thirdparty/glfw/include
+    thirdparty/stb
 )
 
 target_link_libraries(GraphicsTest
