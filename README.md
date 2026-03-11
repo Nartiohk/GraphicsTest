@@ -40,7 +40,7 @@ cmake --build . --config Release
 
 ## Documentation
 
-**📖 [Complete Documentation](PROJECT_DOCUMENTATION.md)** - Comprehensive guide covering:
+**📖 [Complete Documentation](TECH_DOC.md)** - Comprehensive guide covering:
 - **Mesh/Object Architecture** - Memory-efficient design
 - **Systems Overview** - Rendering, Materials, Lighting, Culling
 - **Technical Details** - Vertex formats, algorithms, optimizations
