@@ -1024,6 +1024,10 @@ void Scene::Render(const Shader& shader) const
 - **Issue**: Lighting cost scales with fragments × lights
 - **Impact**: Poor performance with many lights (>10)
 
+
+#### 7. **No Implementation For Adding Object In Real-time**
+
+#### 8. **No Implementation For Loading Model**
 ---
 
 ### Future Improvements
