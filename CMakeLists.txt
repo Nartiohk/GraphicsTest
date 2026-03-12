@@ -28,12 +28,6 @@ add_executable(GraphicsTest
     src/Shader.h
     src/Camera.cpp
     src/Camera.h
-    src/Cube.cpp
-    src/Cube.h
-    src/Plane.cpp
-    src/Plane.h
-    src/Sphere.h
-    src/Sphere.cpp
     src/Texture.cpp
     src/Texture.h
     src/Material.cpp
